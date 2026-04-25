@@ -42,12 +42,21 @@
           "type": "string",
           "enum": ["lobby", "question", "feedback", "leaderboard", "finished"]
         },
+        "pacingMode": {
+          "type": "string",
+          "enum": ["host-led", "auto-pilot"]
+        },
+        "playMode": {
+          "type": "string",
+          "enum": ["live", "self-paced"]
+        },
+        "isLocked": { "type": "boolean" },
         "currentQuestionIndex": { "type": "number" },
         "questionStartTime": { "type": "string", "format": "date-time" },
         "participantCount": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["quizId", "adminId", "roomCode", "status"]
+      "required": ["quizId", "adminId", "roomCode", "status", "pacingMode", "playMode", "isLocked"]
     },
     "Participant": {
       "title": "Room Participant",
@@ -56,9 +65,10 @@
       "properties": {
         "nickname": { "type": "string" },
         "score": { "type": "number" },
+        "isKicked": { "type": "boolean" },
         "joinedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["nickname", "score"]
+      "required": ["nickname", "score", "isKicked"]
     },
     "Response": {
       "title": "Player Response",

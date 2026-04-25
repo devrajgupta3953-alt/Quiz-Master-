@@ -1,33 +1,104 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 0. Global Safety Net
     match /{document=**} {
       allow read, write: if false;
     }
 
+    // Phase 3: Primitives
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    // Validation Blueprints
+    function isValidQuiz(data) {
+      return data.keys().hasAll(['title', 'creatorId', 'questions']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.creatorId == request.auth.uid &&
+             data.questions is list && data.questions.size() <= 100;
+    }
+
+    function isValidRoom(data) {
+      return data.keys().hasAll(['quizId', 'adminId', 'roomCode', 'status', 'pacingMode', 'playMode', 'isLocked']) &&
+             data.roomCode is string && data.roomCode.size() == 6 &&
+             data.adminId == request.auth.uid &&
+             data.status in ['lobby', 'question', 'feedback', 'leaderboard', 'finished'] &&
+             data.pacingMode in ['host-led', 'auto-pilot'] &&
+             data.playMode in ['live', 'self-paced'] &&
+             data.isLocked is bool;
+    }
+
+    function isValidParticipant(data) {
+      return data.keys().hasAll(['nickname', 'score', 'isKicked']) &&
+             data.nickname is string && data.nickname.size() <= 32 &&
+             data.score is int &&
+             data.isKicked is bool;
+    }
+
+    function isValidResponse(data) {
+      return data.keys().hasAll(['participantId', 'questionIndex', 'isCorrect']) &&
+             data.participantId == request.auth.uid &&
+             data.questionIndex is int &&
+             data.isCorrect is bool;
+    }
+
+    // 1. Quizzes
     match /quizzes/{quizId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.creatorId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.creatorId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.creatorId == request.auth.uid;
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidQuiz(incoming());
+      allow update: if isSignedIn() && existing().creatorId == request.auth.uid && 
+                       isValidQuiz(incoming()) && 
+                       incoming().creatorId == existing().creatorId;
+      allow delete: if isSignedIn() && existing().creatorId == request.auth.uid;
     }
 
+    // 2. Rooms
     match /rooms/{roomId} {
-      allow read: if true;
-      allow create: if request.auth != null && request.resource.data.adminId == request.auth.uid;
-      allow update: if true; // Temporary for testing
-      allow delete: if request.auth != null && resource.data.adminId == request.auth.uid;
+      allow read: if true; // Public access to room state via code
+      allow create: if isSignedIn() && isValidRoom(incoming());
+      allow update: if isSignedIn() && (
+        // Admin update
+        (existing().adminId == request.auth.uid && (
+          // Action: Update Status/Progress
+          (incoming().diff(existing()).affectedKeys().hasAny(['status', 'currentQuestionIndex', 'questionStartTime', 'participantCount']) && 
+           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'currentQuestionIndex', 'questionStartTime', 'participantCount'])) ||
+          // Action: Toggle Lock
+          (incoming().diff(existing()).affectedKeys().hasOnly(['isLocked'])) ||
+          // Action: Set Pacing
+          (incoming().diff(existing()).affectedKeys().hasOnly(['pacingMode']))
+        )) ||
+        // Participant update (e.g. self-updating participantCount when joining)
+        // Note: Better to handle this via cloud functions, but if from client:
+        (incoming().diff(existing()).affectedKeys().hasOnly(['participantCount']) && 
+         incoming().participantCount == existing().participantCount + 1)
+      );
+      allow delete: if isSignedIn() && existing().adminId == request.auth.uid;
     }
 
+    // 3. Participants
     match /rooms/{roomId}/participants/{participantId} {
       allow read: if true;
-      allow create: if request.auth != null && participantId == request.auth.uid;
-      allow update: if request.auth != null && (participantId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomId)).data.adminId);
+      allow create: if isSignedIn() && participantId == request.auth.uid && isValidParticipant(incoming());
+      allow update: if isSignedIn() && (
+        // Admin: Kick
+        (get(/databases/$(database)/documents/rooms/$(roomId)).data.adminId == request.auth.uid && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['isKicked'])) ||
+        // Self: Update score
+        (participantId == request.auth.uid && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['score']) &&
+         !existing().isKicked)
+      );
     }
 
+    // 4. Responses
     match /rooms/{roomId}/responses/{responseId} {
-      allow read: if request.auth != null && (resource.data.participantId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomId)).data.adminId);
-      allow create: if request.auth != null && request.resource.data.participantId == request.auth.uid;
+      allow read: if isSignedIn() && (
+        participantId == request.auth.uid || 
+        get(/databases/$(database)/documents/rooms/$(roomId)).data.adminId == request.auth.uid
+      );
+      allow create: if isSignedIn() && isValidResponse(incoming()) && !get(/databases/$(database)/documents/rooms/$(roomId)/participants/$(request.auth.uid)).data.isKicked;
     }
   }
 }

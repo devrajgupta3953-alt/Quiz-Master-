@@ -8,6 +8,7 @@ export const participantService = {
       await setDoc(doc(db, `rooms/${roomId}/participants`, userId), {
         nickname,
         score: 0,
+        isKicked: false,
         joinedAt: serverTimestamp(),
       });
     } catch (error) {
