@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand: #4255ff;
+  --color-brand-hover: #3b49df;
+  --color-surface: #ffffff;
+  --color-bg: #f6f7fb;
+  --color-border: #edeff2;
+  --color-text-main: #1a1a1a;
+  --color-text-sub: #586380;
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-bg text-text-main antialiased;
+  }
+}
+
+@layer components {
+  .quizlet-card {
+    @apply bg-surface border border-transparent hover:border-brand rounded-xl p-6 transition-all shadow-sm active:scale-[0.98];
+  }
+  
+  .quizlet-btn-primary {
+    @apply bg-brand hover:bg-brand-hover text-white px-8 py-3 rounded-lg font-bold transition-all disabled:opacity-50;
+  }
+
+  .quizlet-btn-secondary {
+    @apply bg-surface border-2 border-border hover:border-brand text-text-main px-8 py-3 rounded-lg font-bold transition-all;
+  }
+}
+

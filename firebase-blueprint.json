@@ -1,0 +1,93 @@
+{
+  "entities": {
+    "Quiz": {
+      "title": "Quiz Template",
+      "description": "A template for a quiz containing multiple questions.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "text": { "type": "string" },
+              "options": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "correctOptionIndex": { "type": "number" },
+              "timeLimit": { "type": "number" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "creatorId", "questions"]
+    },
+    "Room": {
+      "title": "Live Room",
+      "description": "A live session of a quiz.",
+      "type": "object",
+      "properties": {
+        "quizId": { "type": "string" },
+        "adminId": { "type": "string" },
+        "roomCode": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["lobby", "question", "feedback", "leaderboard", "finished"]
+        },
+        "currentQuestionIndex": { "type": "number" },
+        "questionStartTime": { "type": "string", "format": "date-time" },
+        "participantCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["quizId", "adminId", "roomCode", "status"]
+    },
+    "Participant": {
+      "title": "Room Participant",
+      "description": "A player joined in a live room.",
+      "type": "object",
+      "properties": {
+        "nickname": { "type": "string" },
+        "score": { "type": "number" },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nickname", "score"]
+    },
+    "Response": {
+      "title": "Player Response",
+      "description": "A participant's answer to a specific question.",
+      "type": "object",
+      "properties": {
+        "participantId": { "type": "string" },
+        "questionIndex": { "type": "number" },
+        "answerIndex": { "type": "number" },
+        "isCorrect": { "type": "boolean" },
+        "points": { "type": "number" },
+        "answeredAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["participantId", "questionIndex", "answerIndex", "isCorrect"]
+    }
+  },
+  "firestore": {
+    "/quizzes/{quizId}": {
+      "schema": "Quiz",
+      "description": "Quiz templates created by admins."
+    },
+    "/rooms/{roomId}": {
+      "schema": "Room",
+      "description": "Live quiz sessions."
+    },
+    "/rooms/{roomId}/participants/{participantId}": {
+      "schema": "Participant",
+      "description": "Participants in a room."
+    },
+    "/rooms/{roomId}/responses/{responseId}": {
+      "schema": "Response",
+      "description": "Answers submitted by players."
+    }
+  }
+}

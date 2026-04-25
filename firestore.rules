@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.creatorId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.creatorId == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.creatorId == request.auth.uid;
+    }
+
+    match /rooms/{roomId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.adminId == request.auth.uid;
+      allow update: if true; // Temporary for testing
+      allow delete: if request.auth != null && resource.data.adminId == request.auth.uid;
+    }
+
+    match /rooms/{roomId}/participants/{participantId} {
+      allow read: if true;
+      allow create: if request.auth != null && participantId == request.auth.uid;
+      allow update: if request.auth != null && (participantId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomId)).data.adminId);
+    }
+
+    match /rooms/{roomId}/responses/{responseId} {
+      allow read: if request.auth != null && (resource.data.participantId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomId)).data.adminId);
+      allow create: if request.auth != null && request.resource.data.participantId == request.auth.uid;
+    }
+  }
+}

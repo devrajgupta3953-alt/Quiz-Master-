@@ -1,0 +1,6 @@
+{
+  "name": "LiveQuiz Master",
+  "description": "A real-time interactive quiz platform where admins can host live sessions and participants can compete in real-time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
