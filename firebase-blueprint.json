@@ -18,7 +18,10 @@
                 "type": "array",
                 "items": { "type": "string" }
               },
-              "correctOptionIndex": { "type": "number" },
+              "correctOptionIndices": {
+                "type": "array",
+                "items": { "type": "number" }
+              },
               "timeLimit": { "type": "number" }
             }
           }
@@ -64,12 +67,17 @@
       "properties": {
         "participantId": { "type": "string" },
         "questionIndex": { "type": "number" },
-        "answerIndex": { "type": "number" },
+        "answerIndices": {
+          "type": "array",
+          "items": { "type": "number" }
+        },
+        "answerText": { "type": "string" },
+        "matchingAnswers": { "type": "object" },
         "isCorrect": { "type": "boolean" },
         "points": { "type": "number" },
         "answeredAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["participantId", "questionIndex", "answerIndex", "isCorrect"]
+      "required": ["participantId", "questionIndex", "isCorrect"]
     }
   },
   "firestore": {

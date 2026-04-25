@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Play, LayoutGrid, Clock, Loader2, Zap, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, Play, LayoutGrid, Clock, Loader2, Zap, ArrowRight, Copy } from 'lucide-react';
 import { quizService, roomService } from '../services/quizService';
 import { useAuth } from '../context/AuthContext';
 import { Quiz } from '../types';
@@ -32,9 +32,16 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleStartRoom = async (quizId: string) => {
+  const handleDuplicate = async (id: string) => {
+    setLoading(true);
+    await quizService.duplicateQuiz(id);
+    await loadQuizzes();
+    setLoading(false);
+  };
+
+  const handleStartRoom = async (quizId: string, mode: Room['playMode'] = 'live') => {
     if (!user) return;
-    const room = await roomService.createRoom(user.uid, quizId);
+    const room = await roomService.createRoom(user.uid, quizId, mode);
     if (room) {
       navigate(`/admin/room/${room.id}`);
     }
@@ -84,7 +91,14 @@ export default function AdminDashboard() {
                 transition={{ delay: i * 0.05 }}
                 className="quizlet-card flex flex-col group relative overflow-hidden"
               >
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
+                  <button
+                    onClick={() => handleDuplicate(quiz.id)}
+                    className="p-2 text-text-sub hover:text-brand bg-white shadow-sm border border-border rounded-lg transition-colors"
+                    title="Duplicate Set"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => handleDelete(quiz.id)}
                     className="p-2 text-text-sub hover:text-red-500 bg-white shadow-sm border border-border rounded-lg transition-colors"
@@ -101,19 +115,26 @@ export default function AdminDashboard() {
                    <h3 className="text-xl font-bold leading-tight group-hover:text-brand transition-colors">
                      {quiz.title}
                    </h3>
+                   <div className="flex items-center gap-2 text-text-sub font-bold text-[10px] uppercase tracking-wider">
+                      <Clock className="w-3 h-3" />
+                      {quiz.questions.reduce((acc, q) => acc + q.timeLimit, 0)}s estimated
+                   </div>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
-                   <div className="flex items-center gap-2 text-text-sub font-bold text-xs">
-                      <Clock className="w-4 h-4" />
-                      {quiz.questions.reduce((acc, q) => acc + q.timeLimit, 0)}s Approx.
-                   </div>
+                <div className="mt-8 pt-6 border-t border-border grid grid-cols-2 gap-3">
                    <button
-                    onClick={() => handleStartRoom(quiz.id)}
-                    className="text-sm font-bold text-brand hover:text-brand-hover flex items-center gap-1 group/btn"
+                    onClick={() => handleStartRoom(quiz.id, 'live')}
+                    className="bg-brand text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-dark transition-all flex items-center justify-center gap-2 group/btn shadow-sm"
                   >
-                    Launch Session
-                    <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                    <Play className="w-3 h-3 fill-current group-hover/btn:scale-110 transition-transform" />
+                    Live Session
+                  </button>
+                  <button
+                    onClick={() => handleStartRoom(quiz.id, 'self-paced')}
+                    className="bg-bg border border-border text-brand py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:border-brand transition-all flex items-center justify-center gap-2 group/btn"
+                  >
+                    <Clock className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
+                    Anytime
                   </button>
                 </div>
               </motion.div>

@@ -22,6 +22,9 @@ export default function JoinRoom() {
       if (!data) {
         alert('Room not found');
         navigate('/');
+      } else if (data.status === 'finished') {
+        alert('Session has already ended');
+        navigate('/');
       } else {
         setRoom(data);
       }
@@ -34,28 +37,31 @@ export default function JoinRoom() {
     e.preventDefault();
     if (!nickname || !room) return;
 
-    try {
-      if (!user) await loginAnonymously();
-      // Auth context updates locally then we join
-    } catch (e) {
-      console.error(e);
+    if (room.isLocked) {
+      alert('This room is locked and no more participants can join.');
+      return;
     }
-  };
 
-  useEffect(() => {
-    // Once user is logged in (anon), and we have room + submittable nickname
-    const performJoin = async () => {
-      if (user && nickname && room) {
-        await participantService.joinRoom(room.id, user.uid, nickname);
-        // Also increment participantCount
+    try {
+      let currentUser = user;
+      if (!currentUser) {
+        currentUser = await loginAnonymously();
+      }
+      
+      if (currentUser) {
+        await participantService.joinRoom(room.id, currentUser.uid, nickname);
         await roomService.updateRoomStatus(room.id, room.status, {
           participantCount: (room.participantCount || 0) + 1
         });
         navigate(`/play/${room.id}`);
       }
-    };
-    performJoin();
-  }, [user]);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to join room. Please try again.');
+    }
+  };
+
+  // Remove the useEffect that depends on user to avoid dual-joining or race conditions
 
   if (loading) return (
     <div className="min-h-screen bg-bg flex items-center justify-center">

@@ -33,11 +33,27 @@ export const quizService = {
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `quizzes/${quizId}`);
     }
+  },
+
+  async duplicateQuiz(quizId: string) {
+    try {
+      const quizSnap = await getDoc(doc(db, 'quizzes', quizId));
+      if (!quizSnap.exists()) throw new Error('Quiz not found');
+      const data = quizSnap.data();
+      const docRef = await addDoc(collection(db, 'quizzes'), {
+        ...data,
+        title: `${data.title} (Copy)`,
+        createdAt: serverTimestamp(),
+      });
+      return docRef.id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'quizzes');
+    }
   }
 };
 
 export const roomService = {
-  async createRoom(adminId: string, quizId: string) {
+  async createRoom(adminId: string, quizId: string, playMode: Room['playMode'] = 'live') {
     try {
       // Generate code
       const roomCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -45,7 +61,10 @@ export const roomService = {
         quizId,
         adminId,
         roomCode,
-        status: 'lobby',
+        status: playMode === 'live' ? 'lobby' : 'question',
+        pacingMode: 'host-led',
+        playMode,
+        isLocked: false,
         currentQuestionIndex: 0,
         questionStartTime: null,
         participantCount: 0,
@@ -74,6 +93,32 @@ export const roomService = {
         status,
         ...extra
       });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `rooms/${roomId}`);
+    }
+  },
+
+  async kickParticipant(roomId: string, participantId: string) {
+    try {
+      await updateDoc(doc(db, `rooms/${roomId}/participants`, participantId), {
+        isKicked: true
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `rooms/${roomId}/participants/${participantId}`);
+    }
+  },
+
+  async toggleLock(roomId: string, isLocked: boolean) {
+    try {
+      await updateDoc(doc(db, 'rooms', roomId), { isLocked });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `rooms/${roomId}`);
+    }
+  },
+
+  async setPacingMode(roomId: string, pacingMode: Room['pacingMode']) {
+    try {
+      await updateDoc(doc(db, 'rooms', roomId), { pacingMode });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `rooms/${roomId}`);
     }

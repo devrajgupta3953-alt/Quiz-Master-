@@ -4,8 +4,9 @@ export interface Question {
   id: string;
   type: QuestionType;
   text: string;
+  imageUrl?: string;
   options?: string[];
-  correctOptionIndex?: number;
+  correctOptionIndices?: number[];
   correctText?: string;
   pairs?: { id: string; key: string; value: string }[];
   timeLimit: number;
@@ -20,6 +21,8 @@ export interface Quiz {
 }
 
 export type RoomStatus = 'lobby' | 'question' | 'feedback' | 'leaderboard' | 'finished';
+export type PacingMode = 'host-led' | 'auto-pilot';
+export type PlayMode = 'live' | 'self-paced';
 
 export interface Room {
   id: string;
@@ -27,6 +30,9 @@ export interface Room {
   adminId: string;
   roomCode: string;
   status: RoomStatus;
+  pacingMode: PacingMode;
+  playMode: PlayMode;
+  isLocked: boolean;
   currentQuestionIndex: number;
   questionStartTime: any;
   participantCount: number;
@@ -38,13 +44,14 @@ export interface Participant {
   nickname: string;
   score: number;
   joinedAt: any;
+  isKicked?: boolean;
 }
 
 export interface Response {
   id: string;
   participantId: string;
   questionIndex: number;
-  answerIndex?: number;
+  answerIndices?: number[];
   answerText?: string;
   matchingAnswers?: Record<string, string>;
   isCorrect: boolean;
